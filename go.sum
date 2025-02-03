@@ -1,0 +1,4 @@
+github.com/leemcloughlin/jdn v0.0.0-20201102080031-6f88db6a6bf2 h1:CdyD5OzAIzNFzpJ9WQRjJWj4pVRxZ9v15xdHnhvUPdw=
+github.com/leemcloughlin/jdn v0.0.0-20201102080031-6f88db6a6bf2/go.mod h1:LAowglanJPLb6WYSx3D1Ht/XE54OGIr0i4mz9kdbXrs=
+github.com/rebay1982/wsjtx-udp v0.0.1 h1:MPtHAY1YC4tUBWsgSZUuSEIuWv7bkPugRpWtSO8tFD0=
+github.com/rebay1982/wsjtx-udp v0.0.1/go.mod h1:C8cWHaJeeVl+GLYxF3rnBkmwckCDczXEDIZPCImgCWk=
