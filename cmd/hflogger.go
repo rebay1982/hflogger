@@ -1,39 +1,28 @@
 package main
 
 import (
+	//"encoding/json"
 	"fmt"
-	"github.com/rebay1982/hflogger/internal/server"
-	"encoding/json"
+
+	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/rebay1982/hflogger/internal/ui"
+	//"github.com/rebay1982/wsjtx-udp"
 )
 
+//var quit = make(chan struct{})
+//var messageCh = make(chan wsjtxudp.WSJTXMessage)
+
 func main() {
+	app := ui.InitializeApplication("- HFLogger -")
 
-	server, _ := server.NewWSJTXServer("127.0.0.1", 2237)
-	defer server.Close()
-
-	fmt.Println("Looking for WSJT-X...")
-	for {
-		message, err := server.ReadFromUDP()
-		if err != nil {
-			fmt.Printf("Failed to read from UDP: %v\n", err)
-			continue
-		}
-
-		if message.Header.MsgType.String() == "Heartbeat" {
-			fmt.Println("Found WSJT-X")
-			break
-		}
+	p := tea.NewProgram(app, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Couldn't run Tea program: %v\n", err)
+		os.Exit(1)
 	}
 
-	for {
-		message, err := server.ReadFromUDP()
-		if err != nil {
-		 fmt.Printf("Failed to read from UDP: %v\n", err)
-		 continue
-		}
-
-		msgJSON, _ := json.Marshal(message)
-
-		fmt.Printf("Got message of type [%s]\n%s\n", message.Header.MsgType, msgJSON)
-	}
+	//close(quit)
 }

@@ -1,13 +1,13 @@
 package server
 
 import (
-	"net"
 	"github.com/rebay1982/wsjtx-udp"
+	"net"
 )
 
 type WSJTXServer struct {
 	active bool
-	conn *net.UDPConn
+	conn   *net.UDPConn
 	parser *wsjtxudp.WSJTXParser
 }
 
@@ -26,8 +26,8 @@ func NewWSJTXServer(ip string, port int) (*WSJTXServer, error) {
 func (s *WSJTXServer) Close() error {
 	err := s.conn.Close()
 	if err == nil {
-		s.active = false	
-	}	
+		s.active = false
+	}
 
 	return err
 }
@@ -35,7 +35,10 @@ func (s *WSJTXServer) Close() error {
 // Listen starts listening on the specified ip and port.
 func (s *WSJTXServer) Listen(ip string, port int) error {
 	if s.active {
-		s.Close()
+		err := s.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	addr := net.UDPAddr{
