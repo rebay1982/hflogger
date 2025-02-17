@@ -1,2 +1,2 @@
 # hflogger
-A simple CLI logger for HF operations
+A simple TUI display for WSJT-X built using CharmSH/BubbleTea
