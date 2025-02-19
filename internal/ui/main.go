@@ -6,6 +6,8 @@ import (
 	"github.com/rebay1982/hflogger/internal/server"
 	"github.com/rebay1982/hflogger/pkg/ansi"
 
+	"github.com/rebay1982/wsjtx-udp"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -17,7 +19,7 @@ type MainApplication struct {
 }
 
 func InitializeApplication(title string) MainApplication {
-	logWindow, _ := NewLog("WSJT-X LOG", 5, 1000)
+	logWindow, _ := NewLog("WSJT-X LOG", 50, 1000)
 	server, _ := server.NewWSJTXServer("127.0.0.1", 2237)
 
 	return MainApplication{
@@ -65,5 +67,10 @@ func (m MainApplication) getMsgFromServer() tea.Msg {
 		return errMessage(err.Error())
 	}
 
-	return logMessage(message.Header.MsgType.String())
+	switch message.Header.MsgType.String() {
+	case "Decode":
+		return logMessage(message.Payload.(wsjtxudp.DecodePayload).Message)
+	default:
+		return logMessage(message.Header.MsgType.String())
+	}
 }

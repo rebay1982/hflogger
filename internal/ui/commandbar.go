@@ -1,7 +1,7 @@
 package ui
 
 import (
-	ansi "github.com/rebay1982/hflogger/pkg/ansi"
+	"github.com/rebay1982/hflogger/pkg/ansi"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
