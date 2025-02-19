@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"encoding/json"
 	"fmt"
 
 	"os"
@@ -9,11 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/rebay1982/hflogger/internal/ui"
-	//"github.com/rebay1982/wsjtx-udp"
 )
-
-//var quit = make(chan struct{})
-//var messageCh = make(chan wsjtxudp.WSJTXMessage)
 
 func main() {
 	app := ui.InitializeApplication("- HFLogger -")
@@ -23,6 +18,4 @@ func main() {
 		fmt.Printf("Couldn't run Tea program: %v\n", err)
 		os.Exit(1)
 	}
-
-	//close(quit)
 }

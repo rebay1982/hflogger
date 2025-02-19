@@ -6,6 +6,8 @@ import (
 	"github.com/rebay1982/hflogger/internal/server"
 	"github.com/rebay1982/hflogger/pkg/ansi"
 
+	"github.com/rebay1982/wsjtx-udp"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -66,7 +68,12 @@ func (m MainApplication) getMsgFromServer() tea.Msg {
 		return errMessage(err.Error())
 	}
 
-	return logMessage(message.Header.MsgType.String())
+	switch message.Header.MsgType.String() {
+	case "Decode":
+		return logMessage(message.Payload.(wsjtxudp.DecodePayload).Message)
+	default:
+		return logMessage(message.Header.MsgType.String())
+	}
 }
 
 func (m MainApplication) getMock() tea.Msg {
