@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +10,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// KNOWN EDGE CASE
+// When the log wraps around (appendIndex > bufferSize) and the window index (and window range) is smaller than the
+// appendIndex - bufferSize, the user start seeing newly appended messages overwrite the oldest message. Haven't
+// figured out a behaviour I'm satisfied with so this will stay this way until then (ie, prob never).
 type Log struct {
 	displayLines int
 	appendIndex  int
@@ -44,11 +47,6 @@ func NewLog(title string, displayLines, bufferSize int) (Log, error) {
 		log.title = "LOG"
 	}
 
-	// TODO: Remove this, it's just some test data.
-	for i := 0; i < 50; i++ {
-		log.Push("Line number: " + strconv.Itoa(i))
-	}
-
 	return log, nil
 }
 
@@ -65,6 +63,9 @@ func (l Log) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			l.decSelectedIndex()
 		case "j", "down":
 			l.incSelectedIndex()
+		case "t":
+			l.tail = true
+			l.tailLog()
 		}
 	case logMessage:
 		l.Push(string(msg))
@@ -163,19 +164,32 @@ func (l *Log) Push(message string) {
 }
 
 func (l *Log) incSelectedIndex() {
-	l.selectedIndex++
+	if l.selectedIndex < (l.appendIndex - 1) {
+		l.selectedIndex++
 
-	if l.selectedIndex == l.appendIndex {
-		l.selectedIndex--
+		// Automatically enable taliing only if the selected line is the last line in the log.
+		if l.selectedIndex == (l.appendIndex - 1) {
+			l.tail = true
+		}
 	}
-
 }
 
 func (l *Log) decSelectedIndex() {
-	l.selectedIndex--
+	if l.selectedIndex > 0 && (l.selectedIndex > (l.appendIndex - len(l.lines))) {
+		l.selectedIndex--
+	}
 
-	if l.selectedIndex < 0 {
-		l.selectedIndex++
+	// When decrementing the selected index, we'll never be at the last line so disable tailing.
+	l.tail = false
+}
+
+func (l *Log) tailLog() {
+	l.selectedIndex = l.appendIndex - 1
+	windowEndIndex := l.windowIndex + (l.displayLines - 1)
+
+	// if we're tailing update the window start position
+	if l.selectedIndex > windowEndIndex {
+		l.windowIndex++
 	}
 }
 
