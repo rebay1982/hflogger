@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,9 +13,13 @@ import (
 
 type Log struct {
 	displayLines int
-	index        int
+	appendIndex  int
 	lines        []string
 	title        string
+
+	selectedIndex int
+	windowIndex   int
+	tail          bool
 }
 
 func NewLog(title string, displayLines, bufferSize int) (Log, error) {
@@ -27,12 +32,21 @@ func NewLog(title string, displayLines, bufferSize int) (Log, error) {
 	}
 
 	log.displayLines = displayLines
-	log.index = 0
+	log.appendIndex = 0
 	log.lines = make([]string, bufferSize)
 	log.title = title
 
+	log.selectedIndex = 0
+	log.windowIndex = 0
+	log.tail = true
+
 	if log.title == "" {
 		log.title = "LOG"
+	}
+
+	// TODO: Remove this, it's just some test data.
+	for i := 0; i < 50; i++ {
+		log.Push("Line number: " + strconv.Itoa(i))
 	}
 
 	return log, nil
@@ -45,9 +59,18 @@ func (l Log) Init() tea.Cmd {
 func (l Log) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "k", "up":
+			l.decSelectedIndex()
+		case "j", "down":
+			l.incSelectedIndex()
+		}
 	case logMessage:
 		l.Push(string(msg))
 	}
+
+	l.updateWindowIndex()
 
 	return l, nil
 }
@@ -58,12 +81,21 @@ func (l Log) View() string {
 	output := fmt.Sprintf("---[ %s ]%s\n", ansi.BoldGreen(title), strings.Repeat("-", 73-len(title)))
 
 	linesToDisplay := l.displayLines
-	if l.index < linesToDisplay {
-		linesToDisplay = l.index
+	if l.appendIndex < linesToDisplay {
+		linesToDisplay = l.appendIndex
 	}
-	for i := linesToDisplay; i > 0; i-- {
-		index := l.getOffsetBufferIndex(-i)
-		output += fmt.Sprintf(" %s\n", l.lines[index])
+
+	for i := 0; i < linesToDisplay; i++ {
+		index := l.getOffsetWindowStartIndex(i)
+
+		logLine := l.lines[index]
+		logCursor := " "
+		if index == l.getSelectedIndex() {
+			logLine = ansi.BoldWhite(logLine)
+			logCursor = ansi.BoldWhite(">")
+		}
+		output += fmt.Sprintf("%s %s\n", logCursor, logLine)
+
 	}
 
 	for i := linesToDisplay; i < l.displayLines; i++ {
@@ -77,12 +109,23 @@ func (l Log) View() string {
 	return output
 }
 
-func (l *Log) Push(message string) {
-	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
+func (l Log) getSelectedIndex() int {
+	return l.selectedIndex % len(l.lines)
+}
 
-	index := l.getBufferIndex()
-	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
-	l.index++
+func (l Log) getWindowStartIndex() int {
+	return l.getOffsetWindowStartIndex(0)
+}
+
+func (l Log) getOffsetWindowStartIndex(offset int) int {
+	index := (l.windowIndex + offset) % len(l.lines)
+
+	// TODO: I think there's a bug here. It will always repeat the last line of the buffer.
+	if index < 0 {
+		index = len(l.lines) - 1
+	}
+
+	return index
 }
 
 func (l Log) getBufferIndex() int {
@@ -90,10 +133,58 @@ func (l Log) getBufferIndex() int {
 }
 
 func (l Log) getOffsetBufferIndex(offset int) int {
-	index := (l.index + offset) % len(l.lines)
+	index := (l.appendIndex + offset) % len(l.lines)
+
+	// TODO: I think there's a bug here. It will always repeat the last line of the buffer.
 	if index < 0 {
 		index = len(l.lines) - 1
 	}
 
 	return index
+}
+
+func (l *Log) Push(message string) {
+	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
+
+	index := l.getBufferIndex()
+	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
+
+	if l.tail {
+		l.selectedIndex = l.appendIndex
+		windowEndIndex := l.windowIndex + (l.displayLines -1)
+
+		// if we're tailing update the window start position
+		if l.selectedIndex > windowEndIndex {
+			l.windowIndex++
+		}
+	}
+
+	l.appendIndex++
+}
+
+func (l *Log) incSelectedIndex() {
+	l.selectedIndex++
+
+	if l.selectedIndex == l.appendIndex {
+		l.selectedIndex--
+	}
+
+}
+
+func (l *Log) decSelectedIndex() {
+	l.selectedIndex--
+
+	if l.selectedIndex < 0 {
+		l.selectedIndex++
+	}
+}
+
+func (l *Log) updateWindowIndex() {
+	if l.selectedIndex < l.windowIndex {
+		l.windowIndex = l.selectedIndex
+	}
+
+	if l.selectedIndex > (l.windowIndex + (l.displayLines - 1)) {
+		l.windowIndex = l.selectedIndex - (l.displayLines - 1)
+	}
 }

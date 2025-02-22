@@ -17,7 +17,7 @@ type MainApplication struct {
 }
 
 func InitializeApplication(title string) MainApplication {
-	logWindow, _ := NewLog("WSJT-X LOG", 5, 1000)
+	logWindow, _ := NewLog("WSJT-X LOG", 20, 1000)
 	server, _ := server.NewWSJTXServer("127.0.0.1", 2237)
 
 	return MainApplication{
@@ -29,8 +29,9 @@ func InitializeApplication(title string) MainApplication {
 }
 
 func (m MainApplication) Init() tea.Cmd {
+	return m.getMock
 
-	return m.getMsgFromServer
+	//return m.getMsgFromServer
 }
 
 func (m MainApplication) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -66,4 +67,8 @@ func (m MainApplication) getMsgFromServer() tea.Msg {
 	}
 
 	return logMessage(message.Header.MsgType.String())
+}
+
+func (m MainApplication) getMock() tea.Msg {
+	return logMessage("Hello World")
 }
