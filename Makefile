@@ -11,3 +11,6 @@ build: vet
 
 test: build
 	go test -v ./...
+
+run: build
+	./hflogger

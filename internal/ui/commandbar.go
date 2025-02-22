@@ -1,7 +1,7 @@
 package ui
 
 import (
-	ansi "github.com/rebay1982/hflogger/pkg/ansi"
+	"github.com/rebay1982/hflogger/pkg/ansi"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -24,5 +24,5 @@ func (c CommandBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c CommandBar) View() string {
-	return ansi.Black(" q:exit")
+	return ansi.Black(" q:exit\tt:tail")
 }
