@@ -10,12 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// KNOWN EDGE CASE
-// When the log wraps around (appendIndex > bufferSize) and the window index (and window range) is smaller than the
-// appendIndex - bufferSize, the user start seeing newly appended messages overwrite the oldest message. Haven't
-// figured out a behaviour I'm satisfied with so this will stay this way until then (ie, prob never).
 type Log struct {
 	displayLines int
+	displayWidth int
 	appendIndex  int
 	lines        []string
 	title        string
@@ -35,6 +32,7 @@ func NewLog(title string, displayLines, bufferSize int) (Log, error) {
 	}
 
 	log.displayLines = displayLines
+	log.displayWidth = 80
 	log.appendIndex = 0
 	log.lines = make([]string, bufferSize)
 	log.title = title
@@ -77,9 +75,8 @@ func (l Log) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (l Log) View() string {
-	// Header
-	title := l.title
-	output := fmt.Sprintf("---[ %s ]%s\n", ansi.BoldGreen(title), strings.Repeat("-", 73-len(title)))
+	// -7 is the number of characters in the title bar that are NOT part of the title string.
+	output := fmt.Sprintf("---[ %s ]%s\n", ansi.BoldGreen(l.title), strings.Repeat("-", l.displayWidth-7-len(l.title)))
 
 	linesToDisplay := l.displayLines
 	if l.appendIndex < linesToDisplay {
@@ -104,10 +101,46 @@ func (l Log) View() string {
 	}
 
 	// Footer
-	output += strings.Repeat("-", 80)
-	output += "\n"
+	percentString := fmt.Sprintf("%d%%", l.computeViewportPercentage())
+	output += fmt.Sprintf("%s[ %s ]---\n", strings.Repeat("-", l.displayWidth-7-len(percentString)), percentString)
 
 	return output
+}
+
+func (l Log) computeViewportPercentage() int {
+	minIndex := l.appendIndex - len(l.lines)
+	if minIndex < 0 {
+		minIndex = 0
+	}
+
+	maxIndex := l.appendIndex - l.displayLines
+	if maxIndex < 0 {
+		maxIndex = 0
+	}
+
+	// Edge case
+	if minIndex == maxIndex {
+		return 100
+	}
+	percent := float64(l.windowIndex-minIndex) / float64(maxIndex-minIndex) * 100.0
+
+	return int(percent)
+}
+
+func (l *Log) Push(message string) {
+	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
+
+	index := l.getBufferIndex()
+	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
+
+	l.appendIndex++
+
+	if l.tail {
+		l.tailLog()
+	}
+
+	// Adjust the window when the appending loops back to the beginning of the buffer.
+	l.adjustWindow()
 }
 
 func (l Log) getSelectedIndex() int {
@@ -144,25 +177,6 @@ func (l Log) getOffsetBufferIndex(offset int) int {
 	return index
 }
 
-func (l *Log) Push(message string) {
-	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
-
-	index := l.getBufferIndex()
-	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
-
-	if l.tail {
-		l.selectedIndex = l.appendIndex
-		windowEndIndex := l.windowIndex + (l.displayLines -1)
-
-		// if we're tailing update the window start position
-		if l.selectedIndex > windowEndIndex {
-			l.windowIndex++
-		}
-	}
-
-	l.appendIndex++
-}
-
 func (l *Log) incSelectedIndex() {
 	if l.selectedIndex < (l.appendIndex - 1) {
 		l.selectedIndex++
@@ -190,6 +204,16 @@ func (l *Log) tailLog() {
 	// if we're tailing update the window start position
 	if l.selectedIndex > windowEndIndex {
 		l.windowIndex++
+	}
+}
+
+func (l *Log) adjustWindow() {
+	bufferSize := len(l.lines)
+	windowDiff := (l.appendIndex - l.windowIndex) - bufferSize
+
+	if windowDiff > 0 {
+		l.windowIndex += windowDiff
+		l.selectedIndex += windowDiff
 	}
 }
 
