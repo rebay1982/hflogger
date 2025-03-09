@@ -114,16 +114,15 @@ func (l Log) View() string {
 	output += strings.Repeat("-", 80)
 	output += "\n"
 
-	// minIndex
+	// Compute view percentage
 	minIndex := (l.appendIndex - 1) - len(l.lines)
 	if minIndex < 0 {
 		minIndex = 0
 	}
-	// maxIndex
 	maxIndex := l.appendIndex - 1
 	percent := float64(l.selectedIndex - minIndex) / float64(maxIndex - minIndex) * 100.0
-	output += fmt.Sprintf(" viewing %f", percent)
 
+	output += fmt.Sprintf(" viewing %d%%\n", int(percent))
 	
 	if l.debug {
 		output += "\n*** DEBUG ***\n"
