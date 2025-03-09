@@ -23,6 +23,7 @@ type Log struct {
 	selectedIndex int
 	windowIndex   int
 	tail          bool
+	debug	bool
 }
 
 func NewLog(title string, displayLines, bufferSize int) (Log, error) {
@@ -66,6 +67,12 @@ func (l Log) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "t":
 			l.tail = true
 			l.tailLog()
+		case "d":
+			if l.debug {
+				l.debug = false
+			} else {
+				l.debug = true
+			}
 		}
 	case logMessage:
 		l.Push(string(msg))
@@ -107,7 +114,46 @@ func (l Log) View() string {
 	output += strings.Repeat("-", 80)
 	output += "\n"
 
+	// minIndex
+	minIndex := (l.appendIndex - 1) - len(l.lines)
+	if minIndex < 0 {
+		minIndex = 0
+	}
+	// maxIndex
+	maxIndex := l.appendIndex - 1
+	percent := float64(l.selectedIndex - minIndex) / float64(maxIndex - minIndex) * 100.0
+	output += fmt.Sprintf(" viewing %f", percent)
+
+	
+	if l.debug {
+		output += "\n*** DEBUG ***\n"
+		output += fmt.Sprintf("appendIndex %d\n", l.appendIndex)
+		output += fmt.Sprintf("selected %d\n", l.selectedIndex)
+		output += fmt.Sprintf("minIndex %d\n", minIndex)
+		output += fmt.Sprintf("maxIndex %d\n", maxIndex)
+	}
+
 	return output
+}
+
+func (l *Log) Push(message string) {
+	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
+
+	index := l.getBufferIndex()
+	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
+
+	if l.tail {
+		l.selectedIndex = l.appendIndex
+		windowEndIndex := l.windowIndex + (l.displayLines - 1)
+
+		// if we're tailing update the window start position
+		if l.selectedIndex > windowEndIndex {
+			l.windowIndex++
+		}
+	}
+
+	// TODO: Add adjustment for when ring buffer rolls over -- see comment at the top of this file.
+	l.appendIndex++
 }
 
 func (l Log) getSelectedIndex() int {
@@ -142,25 +188,6 @@ func (l Log) getOffsetBufferIndex(offset int) int {
 	}
 
 	return index
-}
-
-func (l *Log) Push(message string) {
-	currentTime := time.Now().Format("2006-01-02T15:04:05.000 -0700")
-
-	index := l.getBufferIndex()
-	l.lines[index] = fmt.Sprintf("%s: %s", string(currentTime), message)
-
-	if l.tail {
-		l.selectedIndex = l.appendIndex
-		windowEndIndex := l.windowIndex + (l.displayLines -1)
-
-		// if we're tailing update the window start position
-		if l.selectedIndex > windowEndIndex {
-			l.windowIndex++
-		}
-	}
-
-	l.appendIndex++
 }
 
 func (l *Log) incSelectedIndex() {
